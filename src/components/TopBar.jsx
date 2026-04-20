@@ -12,7 +12,6 @@ export default function TopBar({ status, hasApiKey, theme, onToggleTheme }) {
         <span className={`pill ${status === 'ready' || status === 'analyzed' ? 'live' : ''}`}>
           {status}
         </span>
-        <span className="pill">claude-sonnet-4-6</span>
         <button
           className="theme-toggle"
           onClick={onToggleTheme}

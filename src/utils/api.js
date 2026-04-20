@@ -141,14 +141,28 @@ ${filesBlock}`;
     onProgress?.('progress', 75);
 
     if (!res.ok) {
-      let errMsg = `HTTP ${res.status}`;
+      let errMsg = `HTTP ${res.status} ${res.statusText || ''}`.trim();
+      const contentType = res.headers.get('content-type') || '';
       try {
-        const e = await res.json();
-        errMsg = e.error?.message || e.message || errMsg;
-        console.error('[codescope] API error:', e);
-      } catch {
-        const txt = await res.text().catch(() => '');
-        if (txt) errMsg += ': ' + txt.slice(0, 200);
+        if (contentType.includes('application/json')) {
+          const e = await res.json();
+          errMsg = e.error?.message || e.message || JSON.stringify(e).slice(0, 300) || errMsg;
+          console.error('[codescope] API error (JSON):', e);
+        } else {
+          const txt = await res.text();
+          console.error('[codescope] API error (text):', txt.slice(0, 500));
+          if (txt && txt.length < 200) errMsg = `${errMsg}: ${txt}`;
+          else if (res.status === 502 || res.status === 503) {
+            errMsg = `Server sleeping or unreachable (${res.status}). On Render free tier, first request can take 30+ seconds. Wait a moment and retry.`;
+          } else if (res.status === 404) {
+            errMsg = `Backend endpoint not found (404). The server may not have started correctly. Check Render logs.`;
+          } else {
+            errMsg = `${errMsg}. Server returned non-JSON response. Check Render logs.`;
+          }
+        }
+      } catch (parseErr) {
+        console.error('[codescope] Failed to parse error response:', parseErr);
+        errMsg = `${errMsg} — could not parse server response. Check browser console and Render logs.`;
       }
       throw new Error(errMsg);
     }
