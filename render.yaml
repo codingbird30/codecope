@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: codescope
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false  # you'll set this in the Render dashboard
+      - key: NODE_VERSION
+        value: 20
+    healthCheckPath: /health

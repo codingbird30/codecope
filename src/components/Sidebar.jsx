@@ -29,15 +29,17 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar-inner">
-        {hasApiKey ? (
-          <div className="env-ok">API key loaded from .env</div>
-        ) : (
-          <div className="env-banner">
-            <strong>⚠ No API key</strong><br />
-            Create <code>.env</code> with<br />
-            <code>VITE_ANTHROPIC_API_KEY=sk-ant-...</code><br />
-            then restart <code>npm run dev</code>
-          </div>
+        {import.meta.env.DEV && (
+          hasApiKey ? (
+            <div className="env-ok">API key loaded from .env</div>
+          ) : (
+            <div className="env-banner">
+              <strong>⚠ No API key</strong><br />
+              Create <code>.env</code> with<br />
+              <code>VITE_ANTHROPIC_API_KEY=sk-ant-...</code><br />
+              then restart <code>npm run dev</code>
+            </div>
+          )
         )}
 
         <div className="field">

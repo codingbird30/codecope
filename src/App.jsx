@@ -12,6 +12,8 @@ import { analyzeCode } from './utils/api';
 import { layoutGraph } from './utils/layout';
 
 const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+// In production builds (no VITE_ANTHROPIC_API_KEY), assume the backend proxy will provide the key
+const HAS_API_ACCESS = !!API_KEY || import.meta.env.PROD;
 
 const INITIAL_STEPS = [
   { id: 's1', label: 'Sending source to Claude', state: 'active' },
@@ -113,7 +115,7 @@ export default function App() {
 
   // ── Analysis ──────────────────────────────────────────────
   const handleAnalyze = useCallback(async () => {
-    if (!API_KEY) {
+    if (!HAS_API_ACCESS) {
       alert('No API key found. Add VITE_ANTHROPIC_API_KEY to your .env file and restart the dev server.');
       return;
     }
@@ -237,7 +239,7 @@ export default function App() {
       <div className={`app ${(fileInfo || hasResults) ? '' : 'no-results'}`} onClick={handleCanvasClick}>
         <TopBar
           status={status}
-          hasApiKey={!!API_KEY}
+          hasApiKey={HAS_API_ACCESS}
           theme={theme}
           onToggleTheme={toggleTheme}
         />
@@ -261,7 +263,7 @@ export default function App() {
               onAnalyze={handleAnalyze}
               onReset={handleReset}
               isAnalyzing={isAnalyzing}
-              hasApiKey={!!API_KEY}
+              hasApiKey={HAS_API_ACCESS}
             />
 
             {hasResults ? (

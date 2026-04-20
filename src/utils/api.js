@@ -68,6 +68,10 @@ Rules:
 - severity must be high, medium, or low — lowercase.
 - Be precise. Never invent code that isn't there.`;
 
+// In production (deployed build) call the backend proxy at /api/analyze.
+// In dev (VITE_ANTHROPIC_API_KEY is set) call Anthropic directly from the browser.
+const USE_BACKEND = !import.meta.env.VITE_ANTHROPIC_API_KEY;
+
 export async function analyzeCode({ files, context, focus, apiKey, onProgress }) {
   const filesBlock = Object.entries(files)
     .map(([path, content]) => `\n=== FILE: ${path} ===\n${content}`)
@@ -75,6 +79,7 @@ export async function analyzeCode({ files, context, focus, apiKey, onProgress })
 
   const payloadSize = filesBlock.length;
   console.log('[codescope] Payload size:', payloadSize, 'chars');
+  console.log('[codescope] Mode:', USE_BACKEND ? 'backend proxy' : 'direct browser call');
 
   if (payloadSize > MAX_PAYLOAD_SIZE) {
     throw new Error(
@@ -82,7 +87,7 @@ export async function analyzeCode({ files, context, focus, apiKey, onProgress })
     );
   }
 
-  if (!apiKey) {
+  if (!USE_BACKEND && !apiKey) {
     throw new Error(
       'API key is missing. Create a .env file in the project root with VITE_ANTHROPIC_API_KEY=sk-ant-...'
     );
@@ -92,6 +97,13 @@ export async function analyzeCode({ files, context, focus, apiKey, onProgress })
 Source files:
 ${filesBlock}`;
 
+  const requestBody = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: 16000,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userMsg }]
+  };
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort('timeout'), 120000);
 
@@ -100,21 +112,24 @@ ${filesBlock}`;
     onProgress?.('s2', 'active');
     onProgress?.('progress', 40);
 
-    console.log('[codescope] Sending request to Anthropic API...');
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const url = USE_BACKEND
+      ? '/api/analyze'
+      : 'https://api.anthropic.com/v1/messages';
+
+    const headers = USE_BACKEND
+      ? { 'Content-Type': 'application/json' }
+      : {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        };
+
+    console.log('[codescope] Sending request to', url);
+    const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 16000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMsg }]
-      }),
+      headers,
+      body: JSON.stringify(requestBody),
       signal: controller.signal
     });
 
