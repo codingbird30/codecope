@@ -68,11 +68,11 @@ Rules:
 - severity must be high, medium, or low — lowercase.
 - Be precise. Never invent code that isn't there.`;
 
-// In production (deployed build) call the backend proxy at /api/analyze.
-// In dev (VITE_ANTHROPIC_API_KEY is set) call Anthropic directly from the browser.
-const USE_BACKEND = !import.meta.env.VITE_ANTHROPIC_API_KEY;
+// In dev mode, call Anthropic directly from the browser using VITE_ANTHROPIC_API_KEY.
+// In production, always use the backend proxy so the API key stays on the server.
+const USE_BACKEND = import.meta.env.PROD || !import.meta.env.VITE_ANTHROPIC_API_KEY;
 
-export async function analyzeCode({ files, context, focus, apiKey, onProgress }) {
+export async function analyzeCode({ files, context, focus, apiKey }) {
   const filesBlock = Object.entries(files)
     .map(([path, content]) => `\n=== FILE: ${path} ===\n${content}`)
     .join('\n');
@@ -104,13 +104,7 @@ ${filesBlock}`;
     messages: [{ role: 'user', content: userMsg }]
   };
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort('timeout'), 120000);
-
   try {
-    onProgress?.('s1', 'done');
-    onProgress?.('s2', 'active');
-    onProgress?.('progress', 40);
 
     const url = USE_BACKEND
       ? '/api/analyze'
@@ -129,16 +123,11 @@ ${filesBlock}`;
     const res = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
+      body: JSON.stringify(requestBody)
     });
 
-    clearTimeout(timeoutId);
     console.log('[codescope] Response received. Status:', res.status);
 
-    onProgress?.('s2', 'done');
-    onProgress?.('s3', 'active');
-    onProgress?.('progress', 75);
 
     if (!res.ok) {
       let errMsg = `HTTP ${res.status} ${res.statusText || ''}`.trim();
@@ -200,15 +189,9 @@ ${filesBlock}`;
       throw new Error('Response missing "nodes" array. Claude may have misunderstood the schema.');
     }
 
-    onProgress?.('s3', 'done');
-    onProgress?.('progress', 92);
 
     return parsed;
   } catch (e) {
-    clearTimeout(timeoutId);
-    if (e.name === 'AbortError' || e.message === 'timeout') {
-      throw new Error('Request timed out after 2 minutes. Try again or reduce files.');
-    }
     throw e;
   }
 }

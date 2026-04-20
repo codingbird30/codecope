@@ -15,23 +15,6 @@ const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
 // In production builds (no VITE_ANTHROPIC_API_KEY), assume the backend proxy will provide the key
 const HAS_API_ACCESS = !!API_KEY || import.meta.env.PROD;
 
-const INITIAL_STEPS = [
-  { id: 's1', label: 'Sending source to Claude', state: 'active' },
-  { id: 's2', label: 'Parsing files and tracing calls', state: 'pending' },
-  { id: 's3', label: 'Finding bugs & edge cases', state: 'pending' },
-  { id: 's4', label: 'Building graph visualization', state: 'pending' },
-];
-
-const UNPACK_STEPS = [
-  { id: 'unpack', label: 'Unzipping archive', state: 'active' },
-  { id: 'filter', label: 'Filtering source files', state: 'pending' },
-  { id: 'ready',  label: 'Ready for analysis', state: 'pending' },
-];
-
-function updateStep(steps, id, state) {
-  return steps.map(s => s.id === id ? { ...s, state } : s);
-}
-
 export default function App() {
   const [theme, toggleTheme] = useTheme();
   const panZoom = usePanZoom();
@@ -57,8 +40,6 @@ export default function App() {
     visible: false,
     title: '',
     sub: '',
-    progress: 0,
-    steps: UNPACK_STEPS,
     error: null,
   });
 
@@ -71,26 +52,10 @@ export default function App() {
       return;
     }
 
-    setOverlay({ visible: true, title: 'unpacking', sub: `reading ${file.name}`, progress: 10, steps: UNPACK_STEPS, error: null });
+    setOverlay({ visible: true, title: 'unpacking', sub: `reading ${file.name}`, error: null });
 
     try {
-      setOverlay(o => ({ ...o, progress: 20 }));
-
       const extracted = await processZip(file);
-
-      setOverlay(o => ({
-        ...o,
-        progress: 70,
-        steps: updateStep(updateStep(o.steps, 'unpack', 'done'), 'filter', 'active'),
-      }));
-
-      await new Promise(r => setTimeout(r, 200));
-
-      setOverlay(o => ({
-        ...o,
-        progress: 100,
-        steps: updateStep(updateStep(updateStep(o.steps, 'unpack', 'done'), 'filter', 'done'), 'ready', 'done'),
-      }));
 
       setFiles(extracted);
       setFileInfo({
@@ -104,7 +69,7 @@ export default function App() {
       setExpanded(new Set());
       setSelected(null);
 
-      setTimeout(() => setOverlay(o => ({ ...o, visible: false })), 400);
+      setOverlay(o => ({ ...o, visible: false }));
     } catch (e) {
       setOverlay(o => ({
         ...o,
@@ -127,8 +92,7 @@ export default function App() {
     setIsAnalyzing(true);
     setStatus('analyzing');
 
-    const steps = INITIAL_STEPS.map((s, i) => ({ ...s, state: i === 0 ? 'active' : 'pending' }));
-    setOverlay({ visible: true, title: 'analyzing', sub: 'claude is reading your code', progress: 15, steps, error: null });
+    setOverlay({ visible: true, title: 'analyzing', sub: 'claude is reading your code', error: null });
 
     try {
       const result = await analyzeCode({
@@ -136,27 +100,9 @@ export default function App() {
         context,
         focus,
         apiKey: API_KEY,
-        onProgress: (type, value) => {
-          if (type === 'progress') {
-            setOverlay(o => ({ ...o, progress: value }));
-          } else {
-            // type is step id, value is new state
-            setOverlay(o => ({
-              ...o,
-              steps: updateStep(o.steps, type, value),
-            }));
-          }
-        },
       });
 
       const computedPositions = layoutGraph(result);
-
-      // s4 done
-      setOverlay(o => ({
-        ...o,
-        progress: 100,
-        steps: updateStep(o.steps, 's4', 'done'),
-      }));
 
       setGraph(result);
       setPositions(computedPositions);
@@ -165,7 +111,7 @@ export default function App() {
       setStatus('analyzed');
       panZoom.resetView();
 
-      setTimeout(() => setOverlay(o => ({ ...o, visible: false })), 500);
+      setOverlay(o => ({ ...o, visible: false }));
     } catch (e) {
       console.error('[codescope]', e);
       setOverlay(o => ({

@@ -32,6 +32,9 @@ app.use((req, res, next) => {
 // ── API proxy ─────────────────────────────────────────────────
 app.post('/api/analyze', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
+  // Long Claude analyses can take 60-120+ seconds; disable the default 2min socket timeout
+  req.setTimeout(0);
+  res.setTimeout(0);
 
   if (!API_KEY) {
     console.error('[codescope] /api/analyze called but no API key configured');

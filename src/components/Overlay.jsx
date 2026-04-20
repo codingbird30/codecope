@@ -1,6 +1,7 @@
 import React from 'react';
+import ScanAnimation from './ScanAnimation';
 
-export default function Overlay({ visible, title, sub, progress, steps, error, onDismiss }) {
+export default function Overlay({ visible, title, sub, error, onDismiss }) {
   if (!visible) return null;
 
   return (
@@ -13,7 +14,7 @@ export default function Overlay({ visible, title, sub, progress, steps, error, o
             <div className="error-body">{error.message}</div>
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '16px', lineHeight: '1.6' }}>
               Check the browser console (F12) for details.<br />
-              Common causes: invalid API key, no credits, browser extensions blocking the request, or rate limits.
+              Common causes: invalid API key, no credits, browser extensions blocking the request.
             </div>
             <button className="btn btn-primary" onClick={onDismiss} style={{ width: 'auto', padding: '8px 24px' }}>
               Dismiss
@@ -22,17 +23,8 @@ export default function Overlay({ visible, title, sub, progress, steps, error, o
         ) : (
           <>
             <div className="overlay-title"><em>{title}</em></div>
-            <div className="overlay-sub">{sub}</div>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="progress-steps">
-              {steps.map((s) => (
-                <div key={s.id} className={`progress-step ${s.state}`}>
-                  {s.label}
-                </div>
-              ))}
-            </div>
+            <ScanAnimation />
+            <div className="overlay-sub" style={{ marginTop: '8px', marginBottom: 0 }}>{sub}</div>
           </>
         )}
       </div>

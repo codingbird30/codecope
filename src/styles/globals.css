@@ -895,3 +895,56 @@ select { cursor: pointer; }
   .hero-title { font-size: 44px; }
   .hero-features { grid-template-columns: 1fr; }
 }
+
+/* ─── Scanning animation ─── */
+.scan-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0 4px;
+}
+.scan-scene svg {
+  width: 260px;
+  height: auto;
+  display: block;
+}
+.scan-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/* Magnifier pans left → right, then loops. Uses a 4.5s cycle. */
+.magnifier {
+  transform-origin: center;
+  animation: magnifier-pan 4.5s ease-in-out infinite;
+}
+@keyframes magnifier-pan {
+  0%   { transform: translate(40px,  40px) rotate(-8deg); }
+  25%  { transform: translate(140px, 70px) rotate(4deg); }
+  50%  { transform: translate(210px, 80px) rotate(-4deg); }
+  75%  { transform: translate(120px, 110px) rotate(8deg); }
+  100% { transform: translate(40px,  40px) rotate(-8deg); }
+}
+
+/* The buggy line fades in/out as the lens passes over it (around 50% of cycle) */
+.buggy-line {
+  opacity: 0;
+  animation: bug-reveal 4.5s ease-in-out infinite;
+}
+@keyframes bug-reveal {
+  0%, 35% { opacity: 0; }
+  45%, 60% { opacity: 1; }
+  70%, 100% { opacity: 0; }
+}
+
+/* Subtle pulse on code lines */
+.code-lines {
+  animation: code-pulse 3s ease-in-out infinite;
+}
+@keyframes code-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
